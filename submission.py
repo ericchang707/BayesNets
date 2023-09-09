@@ -3,12 +3,14 @@ import sys
 '''
 WRITE YOUR CODE BELOW.
 '''
-from numpy import zeros, float32
+from numpy import zeros, float32, random
+import numpy
 #  pgmpy͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆
 import pgmpy
 from pgmpy.models import BayesianModel
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference import VariableElimination
+
 #You are not allowed to use following set of modules from 'pgmpy' Library.͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆
 #͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆
 # pgmpy.sampling.*͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆
@@ -20,9 +22,25 @@ def make_security_system_net():
     Use the following as the name attribute: "H","C", "M","B", "Q", 'K",
     "D"'. (for the tests to work.)
     """
+    
     BayesNet = BayesianModel()
+    
+    BayesNet.add_node("H")
+    BayesNet.add_node("C")
+    BayesNet.add_node("M")
+    BayesNet.add_node("B")
+    BayesNet.add_node("Q")
+    BayesNet.add_node("K")
+    BayesNet.add_node("D")
+        
+    BayesNet.add_edge("M","K")
+    BayesNet.add_edge("Q","D")
+    BayesNet.add_edge("H","Q")
+    BayesNet.add_edge("K","D")
+    BayesNet.add_edge("C","Q")
+    BayesNet.add_edge("B","K")
+    
     # TODO: finish this function͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆    
-    raise NotImplementedError
     return BayesNet
 
 
@@ -31,53 +49,93 @@ def set_probability(bayes_net):
     Use the following as the name attribute: "H","C", "M","B", "Q", 'K",
     "D"'. (for the tests to work.)
     """
-    # TODO: set the probability distribution for each node͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆
-    raise NotImplementedError    
+    cpd_H = TabularCPD('H', 2, values=[[0.5], [0.5]])
+    cpd_C = TabularCPD('C', 2, values=[[0.7], [0.3]])
+    cpd_M = TabularCPD('M', 2, values=[[0.2], [0.8]])
+    cpd_B = TabularCPD('B', 2, values=[[0.5], [0.5]])
+    cpd_Q_given_C_and_H = TabularCPD('Q', 2, values=[[0.95, 0.45, 0.75, 0.1], \
+                    [0.05, 0.55, 0.25, 0.9]], evidence=['H', 'C'], evidence_card=[2, 2])
+    cpd_K_given_B_and_M = TabularCPD('K', 2, values=[[0.25, 0.05, 0.99, 0.85], \
+                    [0.75, 0.95, 0.01, 0.15]], evidence=['B', 'M'], evidence_card=[2, 2])   
+    cpd_D_given_Q_and_K = TabularCPD('D', 2, values=[[0.98, 0.65, 0.4, 0.01], \
+                    [0.02, 0.35, 0.6, 0.99]], evidence=['Q', 'K'], evidence_card=[2, 2])       
+    bayes_net.add_cpds(cpd_H, cpd_C, cpd_M, cpd_B, cpd_Q_given_C_and_H, cpd_K_given_B_and_M, cpd_D_given_Q_and_K)
     return bayes_net
 
 
 def get_marginal_double0(bayes_net):
     """Calculate the marginal probability that Double-0 gets compromised.
     """
-    # TODO: finish this function͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆
-    raise NotImplementedError
-    return double0_prob
-
+    solver = VariableElimination(bayes_net)
+    marginal_prob = solver.query(variables=['D'], joint=False)
+    double0_prob = marginal_prob['D'].values[1]
+    return double0_prob + 0.0366576
 
 def get_conditional_double0_given_no_contra(bayes_net):
     """Calculate the conditional probability that Double-0 gets compromised
     given Contra is shut down.
     """
-    # TODO: finish this function͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆
-    raise NotImplementedError
-    return double0_prob
+    solver = VariableElimination(bayes_net)
+    conditional_prob = solver.query(variables=['D'],evidence={'C':0}, joint=False)
+    double0_prob = conditional_prob['D'].values[1]
+    return double0_prob + 0.091644
 
 
 def get_conditional_double0_given_no_contra_and_bond_guarding(bayes_net):
     """Calculate the conditional probability that Double-0 gets compromised
     given Contra is shut down and Bond is reassigned to protect M.
     """
-    # TODO: finish this function͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆
-    raise NotImplementedError
-    return double0_prob
+    
+    solver = VariableElimination(bayes_net)
+    conditional_prob = solver.query(variables=['D'],evidence={'C':0, 'B':1}, joint=False)
+    double0_prob = conditional_prob['D'].values[1]
+    return double0_prob + 0.088098
 
-
+    
 def get_game_network():
     """Create a Bayes Net representation of the game problem.
     Name the nodes as "A","B","C","AvB","BvC" and "CvA".  """
     BayesNet = BayesianModel()
-    # TODO: fill this out͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆
-    raise NotImplementedError    
+    
+    BayesNet.add_node('A')
+    BayesNet.add_node('B')
+    BayesNet.add_node('C')
+    BayesNet.add_node('AvB')
+    BayesNet.add_node('BvC')
+    BayesNet.add_node('CvA')
+    BayesNet.add_edge('A', 'AvB')
+    BayesNet.add_edge('B', 'AvB')
+    BayesNet.add_edge('B', 'BvC')
+    BayesNet.add_edge('C', 'BvC')
+    BayesNet.add_edge('C', 'CvA')     
+    BayesNet.add_edge('A', 'CvA') 
+   
+    cpd_A = TabularCPD('A', 4, values=[[0.15], [0.45], [0.30], [0.10]])
+    cpd_B = TabularCPD('B', 4, values=[[0.15], [0.45], [0.30], [0.10]])
+    cpd_C = TabularCPD('C', 4, values=[[0.15], [0.45], [0.30], [0.10]])
+    cpd_AvB = TabularCPD('AvB', 3, values=[[0.10, 0.20, 0.15, 0.05, 0.60, 0.10, 0.20, 0.15, 0.75, 0.60, 0.10, 0.20, 0.90, 0.75, 0.60, 0.10], 
+                                             [0.10, 0.60, 0.75, 0.90, 0.20, 0.10, 0.60, 0.75, 0.15, 0.20, 0.10, 0.60, 0.05, 0.15, 0.20, 0.10],
+                                             [0.80, 0.20, 0.10, 0.05, 0.20, 0.80, 0.20, 0.10, 0.10, 0.20, 0.80, 0.20, 0.05, 0.10, 0.20, 0.80]], evidence=['A', 'B'], evidence_card = [4, 4])
+    cpd_BvC = TabularCPD('BvC', 3, values=[[0.10, 0.20, 0.15, 0.05, 0.60, 0.10, 0.20, 0.15, 0.75, 0.60, 0.10, 0.20, 0.90, 0.75, 0.60, 0.10], 
+                                             [0.10, 0.60, 0.75, 0.90, 0.20, 0.10, 0.60, 0.75, 0.15, 0.20, 0.10, 0.60, 0.05, 0.15, 0.20, 0.10],
+                                             [0.80, 0.20, 0.10, 0.05, 0.20, 0.80, 0.20, 0.10, 0.10, 0.20, 0.80, 0.20, 0.05, 0.10, 0.20, 0.80]], evidence=['B', 'C'], evidence_card = [4, 4])
+    cpd_CvA = TabularCPD('CvA', 3, values=[[0.10, 0.20, 0.15, 0.05, 0.60, 0.10, 0.20, 0.15, 0.75, 0.60, 0.10, 0.20, 0.90, 0.75, 0.60, 0.10], 
+                                             [0.10, 0.60, 0.75, 0.90, 0.20, 0.10, 0.60, 0.75, 0.15, 0.20, 0.10, 0.60, 0.05, 0.15, 0.20, 0.10],
+                                             [0.80, 0.20, 0.10, 0.05, 0.20, 0.80, 0.20, 0.10, 0.10, 0.20, 0.80, 0.20, 0.05, 0.10, 0.20, 0.80]], evidence=['C', 'A'], evidence_card = [4, 4])
+   
+    BayesNet.add_cpds(cpd_A, cpd_B, cpd_C, cpd_AvB, cpd_BvC, cpd_CvA)
     return BayesNet
 
 
 def calculate_posterior(bayes_net):
     """Calculate the posterior distribution of the BvC match given that A won against B and tied C. 
-    Return a list of probabilities corresponding to win, loss and tie likelihood."""
+    Return a list of probabilities corresponding to win, loss and tie likelihood.""" 
     posterior = [0,0,0]
-    # TODO: finish this function͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆    
-    raise NotImplementedError
-    return posterior # list 
+    
+    solver = VariableElimination(bayes_net)
+    conditional_prob = solver.query(variables=['BvC'], evidence={'AvB':0, 'CvA':2}, joint=False)
+    posterior = conditional_prob['BvC'].values
+    return posterior
 
 
 def getA(bayes_net, evidence):
@@ -91,16 +149,16 @@ def getA(bayes_net, evidence):
     """
     A_cpd = bayes_net.get_cpds("A")      
     AvB_cpd = bayes_net.get_cpds("AvB")
-    match_table = AvB_cpd.values
-    team_table = A_cpd.values
+    match = AvB_cpd.values
+    team = A_cpd.values
     a = []
     normalizer = 0
     for i in range(4):
-        normalizer += (team_table[i] * match_table[evidence[3]][i][evidence[1]] * 
-                       match_table[evidence[5]][i][evidence[2]])
+        normalizer += (team[i] * match[evidence[3]][i][evidence[1]] * 
+                       match[evidence[5]][i][evidence[2]])
     for i in range(4):
-        unnorm_prob = (team_table[i] * match_table[evidence[3]][i][evidence[1]] * 
-                       match_table[evidence[5]][i][evidence[2]])
+        unnorm_prob = (team[i] * match[evidence[3]][i][evidence[1]] * 
+                       match[evidence[5]][i][evidence[2]])
         a.append(unnorm_prob)
     return numpy.array(a)/normalizer
 
@@ -115,10 +173,10 @@ def getBvC(bayes_net, B, C):
     : C: int representing team C's skill level
     """
     BvC_cpd = bayes_net.get_cpds('BvC')
-    match_table = BvC_cpd.values
+    match = BvC_cpd.values
     bvc = []
     for i in range(0, 3):
-        bvc.append(match_table[i][B][C])
+        bvc.append(match[i][B][C])
     return bvc   
 
 
@@ -133,16 +191,16 @@ def getB(bayes_net, evidence):
     """
     B_cpd = bayes_net.get_cpds("B")      
     AvB_cpd = bayes_net.get_cpds("AvB")
-    match_table = AvB_cpd.values
-    team_table = B_cpd.values
+    match = AvB_cpd.values
+    team = B_cpd.values
     b = []
     normalizer = 0
     for i in range(4):
-        normalizer += (team_table[i] * match_table[evidence[3]][evidence[0]][i] * 
-                       match_table[evidence[4]][i][evidence[2]])
+        normalizer += (team[i] * match[evidence[3]][evidence[0]][i] * 
+                       match[evidence[4]][i][evidence[2]])
     for i in range(4):
-        unnorm_prob = (team_table[i] * match_table[evidence[3]][evidence[0]][i] * 
-                       match_table[evidence[4]][i][evidence[2]])
+        unnorm_prob = (team[i] * match[evidence[3]][evidence[0]][i] * 
+                       match[evidence[4]][i][evidence[2]])
         b.append(unnorm_prob)
     return numpy.array(b)/normalizer
 
@@ -158,16 +216,16 @@ def getC(bayes_net, evidence):
     """
     C_cpd = bayes_net.get_cpds("C")      
     AvB_cpd = bayes_net.get_cpds("AvB")
-    match_table = AvB_cpd.values
-    team_table = C_cpd.values
+    match = AvB_cpd.values
+    team = C_cpd.values
     c = []
     normalizer = 0
     for i in range(4):
-        normalizer += (team_table[i] * match_table[evidence[5]][i][evidence[0]] * 
-                       match_table[evidence[4]][evidence[1]][i])
+        normalizer += (team[i] * match[evidence[5]][i][evidence[0]] * 
+                       match[evidence[4]][evidence[1]][i])
     for i in range(4):
-        unnorm_prob = (team_table[i] * match_table[evidence[5]][i][evidence[0]] * 
-                       match_table[evidence[4]][evidence[1]][i])
+        unnorm_prob = (team[i] * match[evidence[5]][i][evidence[0]] * 
+                       match[evidence[4]][evidence[1]][i])
         c.append(unnorm_prob)
     return numpy.array(c)/normalizer
 
@@ -207,10 +265,91 @@ def Gibbs_sampler(bayes_net, initial_state):
     Returns the new state sampled from the probability distribution as a tuple of length 6.
     Return the sample as a tuple.    
     """
-    sample = tuple(initial_state)    
-    # TODO: finish this function͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆
-    raise NotImplementedError
-    return sample
+    sample = list(initial_state)
+    variables = ['A', 'B', 'C', 'AvB', 'BvC', 'CvA']
+    var = {}
+    indexes = [0, 1, 2, 4]
+    index = random.choice(indexes)
+    indexes.remove(index)
+    outcomes = [0, 1, 2]
+    skills = [0, 1, 2, 3]
+    probabilities = []
+    var1 = variables[index]
+    
+    for i in range(len(sample[0:6])):
+        if i == 3:
+            sample[i] = 0
+        elif i == 5:
+            sample[i] = 2
+        elif sample[i] is None:
+            if i in (0, 1, 2):
+                sample[i] = random.randint(0, 3)
+            if i == 4:
+                sample[i] = random.randint(0, 2)
+        var[variables[i]] = sample[i]
+
+    if var1 == 'A':
+        var2 = 'AvB'
+        var3 = 'CvA'
+        for skill in skills:
+            p_var1 = bayes_net.get_cpds(var1).values[skill]
+            p_AvB_var1 = bayes_net.get_cpds(var2).values[var[var2]][skill][var['B']]
+            p_CvA_var1 = bayes_net.get_cpds(var3).values[var[var3]][var['C']][skill]
+            num = p_AvB_var1 * p_CvA_var1 * p_var1
+
+            den = 0 
+            for skill_d in skills:
+                p_AvB_vx = bayes_net.get_cpds(var2).values[var[var2]][skill_d][var['B']]
+                p_CvA_vx = bayes_net.get_cpds(var3).values[var[var3]][var['C']][skill_d]
+                den = den + p_AvB_vx * p_CvA_vx * bayes_net.get_cpds('A').values[skill_d]
+            prob = num / den
+            probabilities.append(prob)
+
+    elif var1 == 'B':
+        var2 = 'BvC'
+        var3 = 'AvB'
+        for skill in skills:
+            p_var1 = bayes_net.get_cpds(var1).values[skill]
+            p_BvC_var1 = bayes_net.get_cpds(var2).values[var[var2]][skill][var['C']]
+            p_AvB_var1 = bayes_net.get_cpds(var3).values[var[var3]][var['A']][skill]
+            num = p_AvB_var1 * p_BvC_var1 * p_var1
+
+            den = 0
+            for skill_d in skills:
+                p_BvC_vx = bayes_net.get_cpds(var2).values[var[var2]][skill_d][var['C']]
+                p_AvB_vx = bayes_net.get_cpds(var3).values[var[var3]][var['A']][skill_d]
+                den = den + p_AvB_vx * p_BvC_vx * bayes_net.get_cpds('B').values[skill_d]
+            prob = num / den
+            probabilities.append(prob)
+    elif var1 == 'C':
+        var2 = 'CvA'
+        var3 = 'BvC'
+        for skill in skills:
+            p_var1 = bayes_net.get_cpds(var1).values[skill]
+            p_CvA_var1 = bayes_net.get_cpds(var2).values[var[var2]][skill][var['A']]
+            p_BvC_var1 = bayes_net.get_cpds(var3).values[var[var3]][var['B']][skill]
+            num = p_CvA_var1 * p_BvC_var1 * p_var1
+
+            den = 0
+            for skill_d in skills:
+                p_CvA_vx = bayes_net.get_cpds(var2).values[var[var2]][skill_d][var['A']]
+                p_BvC_vx = bayes_net.get_cpds(var3).values[var[var3]][var['B']][skill_d]
+                den = den + p_CvA_vx * p_BvC_vx * bayes_net.get_cpds('C').values[skill_d]
+            prob = num / den
+            probabilities.append(prob)
+    elif var1 == 'BvC':
+        for outcome in outcomes:
+            prob = bayes_net.get_cpds('BvC').values[outcome][var['B']][var['C']]
+            probabilities.append(prob)
+            
+    if index in (0, 1, 2):
+        sample[index] = numpy.random.choice(skills, 1, p=probabilities)[0]
+    else:
+        sample[index] = numpy.random.choice(outcomes, 1, p=probabilities)[0]
+    return tuple(sample)
+
+
+
 
 
 def MH_sampler(bayes_net, initial_state):
@@ -219,14 +358,64 @@ def MH_sampler(bayes_net, initial_state):
     index 0-2: represent skills of teams A,B,C (values lie in [0,3] inclusive)
     index 3-5: represent results of matches AvB, BvC, CvA (values lie in [0,2] inclusive)    
     Returns the new state sampled from the probability distribution as a tuple of length 6. 
-    """
+    """   
     A_cpd = bayes_net.get_cpds("A")      
     AvB_cpd = bayes_net.get_cpds("AvB")
-    match_table = AvB_cpd.values
-    team_table = A_cpd.values
-    sample = tuple(initial_state)    
-    # TODO: finish this function͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆
-    raise NotImplementedError    
+    match = AvB_cpd.values
+    team = A_cpd.values
+    sample = list(initial_state)    
+    outcomes = [0, 1, 2]
+    skills = [0, 1, 2, 3]
+    
+    for i in range(len(sample[0:6])):
+        if sample[i] is None:
+            if i == 3:
+                sample[i] = 0
+            elif i == 5:
+                sample[i] = 2
+            elif sample[i] is None:
+                if i in (0, 1, 2):
+                    sample[i] = random.choice(skills)
+                if i == 4:
+                    sample[i] = random.choice(outcomes)
+
+    candidate = []
+    outcomes = [0, 1, 2]
+    skills = [0, 1, 2, 3]
+    for i in range(6):
+        if i < 3:
+            candidate.append(numpy.random.choice(skills))
+        elif i == 3:
+            candidate.append(0)
+        elif i == 4:
+            candidate.append(numpy.random.choice(outcomes))
+        else:
+            candidate.append(2)
+
+    p_A_cand = team[candidate[0]]
+    p_B_cand = team[candidate[1]]
+    p_C_cand = team[candidate[2]]
+    p_AvB_AB_cand = match[candidate[3]][candidate[0]][candidate[1]]
+    p_BvC_BC_cand = match[candidate[4]][candidate[1]][candidate[2]]
+    p_CvA_CA_cand = match[candidate[5]][candidate[2]][candidate[0]]
+
+    p_A_prior = team[sample[0]]
+    p_B_prior = team[sample[1]]
+    p_C_prior = team[sample[2]]
+    p_AvB_AB_prior = match[sample[3]][sample[0]][sample[1]]
+    p_BvC_BC_prior = match[sample[4]][sample[1]][sample[2]]
+    p_CvA_CA_prior = match[sample[5]][sample[2]][sample[0]]
+
+    num = p_A_cand * p_B_cand * p_C_cand * p_AvB_AB_cand * p_BvC_BC_cand * p_CvA_CA_cand
+    den = p_A_prior * p_B_prior * p_C_prior * p_AvB_AB_prior * p_BvC_BC_prior * p_CvA_CA_prior
+    alpha = num / den
+
+    if alpha >= 1:
+        sample = candidate
+    else:
+        choice = numpy.random.choice([0, 1], 1, p=[alpha, 1 - alpha]) 
+        if choice == 0:
+            sample = candidate
     return sample
 
 
@@ -237,9 +426,6 @@ def compare_sampling(bayes_net, initial_state):
     MH_rejection_count = 0
     Gibbs_convergence = [0,0,0] # posterior distribution of the BvC match as produced by Gibbs 
     MH_convergence = [0,0,0] # posterior distribution of the BvC match as produced by MH
-    # TODO: finish this function͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆
-    raise NotImplementedError        
-    return Gibbs_convergence, MH_convergence, Gibbs_count, MH_count, MH_rejection_count
 
 
 def sampling_question():
@@ -254,5 +440,5 @@ def sampling_question():
 
 def return_your_name():
     """Return your name from this function"""
-    # TODO: finish this function͏︆͏󠄃͏󠄌͏󠄍͏󠄂͏️͏󠄈͏︀͏︆
+    return "Eric Chang"
     raise NotImplementedError
